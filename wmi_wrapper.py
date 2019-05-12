@@ -55,6 +55,25 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
+
+    @staticmethod
+    def get_processors():
+        """Thread Safe WMI Query for Processors info in Win32_Processor Class"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        w = WMI()
+        processors=[]
+        try:
+            for p in w.Win32_Processor(["Name"]):
+                processors.append(p.Name)
+            return processors
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
     @staticmethod
     def is_computer_on_AC_power():
         """Thread Safe WMI Query return True if AC adapter is connected"""
@@ -129,7 +148,7 @@ class WmiHandler():
     @staticmethod
     def get_disks_drives():
         """Thread Safe WMI Query for Disk drives in Win32_DiskDrive Class
-        Returns: array of Dictionary: {Model, Serial, Index, Capacity, HumanCapacity
+        Returns: array of Dictionary: {index, model, serial_number, capacity, human_capacity
         """
         disks=[]
         if not threading.current_thread() is threading.main_thread():
@@ -258,11 +277,9 @@ class VolumeRemovalWatcher:
                 pythoncom.CoUninitialize()
 
 if __name__=="__main__":
-    print(WmiHandler.get_total_memory_amount(get_human_readable_value=True))
-    print(WmiHandler.get_disks_drives())
-    print(WmiHandler.is_ssd_drive(0))
-    insert_watcher = VolumeCreationWatcher()
-    insert_watcher.watch_for_events()
+    print(WmiHandler.get_processors())
+    #print(WmiHandler.get_disks_drives())
+
 
     # t =threading.Thread(target=lambda: print(WmiHandler.is_computer_on_AC_power()))
     # t.start()
