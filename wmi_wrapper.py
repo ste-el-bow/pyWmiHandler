@@ -1,7 +1,7 @@
 from wmi import WMI, x_wmi_timed_out
 import pythoncom
 import threading
-from helpers import convert_to_human_readable
+from .helpers import convert_to_human_readable
 
 
 class WmiHandler():
