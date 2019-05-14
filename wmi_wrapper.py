@@ -173,6 +173,23 @@ class WmiHandler():
                 pythoncom.CoUninitialize()
 
     @staticmethod
+    def get_system_sku(manufacturer):
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+
+        try:
+            if 'DELL' in manufacturer.upper() or 'ALIENWARE' in manufacturer.upper():
+                w = WMI()
+                for sku in w.Win32_ComputerSystem(["SystemSKUNumber"] ):
+                    return sku.SystemSKUNumber
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
+    @staticmethod
     def is_ssd_drive(disk_id):
         """Thread Safe WMI Query for checking if disk drive is SSD  in MSFT_PhysicalDisk class"""
         if not threading.current_thread() is threading.main_thread():
