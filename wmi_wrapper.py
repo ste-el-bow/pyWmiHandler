@@ -1,7 +1,7 @@
 from wmi import WMI, x_wmi_timed_out
 import pythoncom
 import threading
-from .helpers import convert_to_human_readable
+from.helpers import convert_to_human_readable
 
 
 class WmiHandler():
@@ -141,6 +141,31 @@ class WmiHandler():
         except Exception as e:
             print(e)
             return 0
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
+
+    @staticmethod
+    def get_pnp_devices():
+        """Thread Safe WMI Query for list of system devices"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        w = WMI()
+        try:
+            devices = []
+            for dev in w.Win32_PnPEntity():
+                try:
+                    devices.append({'caption': dev.Caption,
+                     'hw_id': dev.HardwareID[0],
+                     'name': dev.Name,
+                     'status': dev.Status
+                     })
+                except Exception as ex:
+                    pass
+            return devices
+        except Exception as e:
+            print(e)
         finally:
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
@@ -294,7 +319,7 @@ class VolumeRemovalWatcher:
                 pythoncom.CoUninitialize()
 
 if __name__=="__main__":
-    print(WmiHandler.get_processors())
+    print(WmiHandler.get_pnp_devices())
     #print(WmiHandler.get_disks_drives())
 
 
