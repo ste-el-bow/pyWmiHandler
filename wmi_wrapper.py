@@ -1,7 +1,7 @@
 from wmi import WMI, x_wmi_timed_out
 import pythoncom
 import threading
-from.helpers import convert_to_human_readable
+from .helpers import convert_to_human_readable
 
 
 class WmiHandler():
@@ -16,6 +16,28 @@ class WmiHandler():
         try:
             for sn in w.Win32_Bios(["SerialNumber"]):
                 return sn.SerialNumber
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
+    @staticmethod
+    def get_operating_system_info():
+        """Thread Safe WMI Query for Caption, build, arch, systemDrive in Win32_OperatingSystem Class"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        w = WMI()
+        try:
+            for os in w.Win32_OperatingSystem(["Caption", "OSArchitecture", "MUILanguages", "Version", "SystemDrive"]):
+                return {
+                    "name": os.Caption,
+                    "arch": os.OSArchitecture,
+                    "languages": os.MUILanguages,
+                    'build': os.Version,
+                    'system_drive': os.SystemDrive
+                }
         except Exception as e:
             print(e)
             return None
@@ -319,7 +341,7 @@ class VolumeRemovalWatcher:
                 pythoncom.CoUninitialize()
 
 if __name__=="__main__":
-    print(WmiHandler.get_pnp_devices())
+    print(WmiHandler.get_operating_system_info())
     #print(WmiHandler.get_disks_drives())
 
 
