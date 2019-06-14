@@ -233,8 +233,8 @@ class WmiHandler():
                 if my_sku == None:
                     w = WMI()
                     for sk2 in w.Win32_ComputerSystem(['OEMStringArray']):
-                        my_sku = sk2[1][2:7]
-                        return my_sku
+                        my_sku = sk2.OEMStringArray[1][2:7]
+                return my_sku
         except Exception as e:
             print(e)
             return None
