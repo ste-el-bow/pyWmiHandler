@@ -226,9 +226,9 @@ class WmiHandler():
 
         try:
             if 'DELL' in manufacturer.upper() or 'ALIENWARE' in manufacturer.upper():
-                w = WMI()
-                for sku in w.Win32_ComputerSystem(["SystemSKUNumber"] ):
-                    return sku.SystemSKUNumber
+                w = WMI(namespace='WMI')
+                for sku in w.MS_SystemInformation(["SystemSKU"]):
+                    return sku.SystemSKU
         except Exception as e:
             print(e)
             return None
@@ -341,7 +341,7 @@ class VolumeRemovalWatcher:
                 pythoncom.CoUninitialize()
 
 if __name__=="__main__":
-    print(WmiHandler.get_operating_system_info())
+    print(WmiHandler.get_system_sku('DELL'))
     #print(WmiHandler.get_disks_drives())
 
 
