@@ -1,8 +1,10 @@
 from wmi import WMI, x_wmi_timed_out
 import pythoncom
 import threading
-from .helpers import convert_to_human_readable
-
+try:
+    from .helpers import convert_to_human_readable
+except ModuleNotFoundError:
+    from helpers import convert_to_human_readable
 
 class WmiHandler():
 
@@ -193,7 +195,7 @@ class WmiHandler():
                 pythoncom.CoUninitialize()
 
     @staticmethod
-    def get_disks_drives():
+    def get_disks_drives(internal_only=True):
         """Thread Safe WMI Query for Disk drives in Win32_DiskDrive Class
         Returns: array of Dictionary: {index, model, serial_number, capacity, human_capacity
         """
@@ -201,7 +203,9 @@ class WmiHandler():
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
         w = WMI()
-        wql = 'SELECT * FROM Win32_DiskDrive WHERE InterfaceType <> "USB"'
+        wql = 'SELECT * FROM Win32_DiskDrive'
+        if internal_only:
+            wql+=' WHERE InterfaceType <> "USB"'
         try:
             for dd in w.query(wql):
                 d ={}
@@ -235,12 +239,35 @@ class WmiHandler():
                     for sk2 in w.Win32_ComputerSystem(['OEMStringArray']):
                         my_sku = sk2.OEMStringArray[1][2:7]
                 return my_sku
+            else:
+                w = WMI(namespace='WMI')
+                for sku in w.MS_SystemInformation(["SystemSKU"]):
+                    my_sku = sku.SystemSKU
+                return my_sku
         except Exception as e:
             print(e)
             return None
         finally:
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
+
+    @staticmethod
+    def get_IP():
+        """Thread Safe WMI Query for get primary IP address"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+
+        try:
+            w = WMI()
+            for m in w.Win32_NetworkAdapterConfiguration(["IPAddress"], IPEnabled=True):
+                return m.IPAddress[0]
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
 
     @staticmethod
     def is_ssd_drive(disk_id):
@@ -347,7 +374,7 @@ class VolumeRemovalWatcher:
                 pythoncom.CoUninitialize()
 
 if __name__=="__main__":
-    print(WmiHandler.get_system_sku('DELL'))
+    print(WmiHandler.get_IP())
     #print(WmiHandler.get_disks_drives())
 
 
