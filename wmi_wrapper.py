@@ -114,6 +114,23 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
+    @staticmethod
+    def is_windows_activated():
+        """Thread Safe WMI Query return True if windows is activated"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        w = WMI()
+        try:
+            for win in w.SoftwareLicensingProduct(["LicenseStatus"], ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f'):
+                if win.LicenseStatus == 1:
+                    return True
+            return False
+        except Exception as e:
+            print(e)
+            return False
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
 
     @staticmethod
     def get_estimated_battery_level():
