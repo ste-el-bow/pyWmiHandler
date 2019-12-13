@@ -247,20 +247,14 @@ class WmiHandler():
 
         try:
             my_sku=None
-            if 'DELL' in manufacturer.upper() or 'ALIENWARE' in manufacturer.upper():
-                w = WMI(namespace='WMI')
-                for sku in w.MS_SystemInformation(["SystemSKU"]):
-                    my_sku = sku.SystemSKU
-                if my_sku == None:
-                    w = WMI()
-                    for sk2 in w.Win32_ComputerSystem(['OEMStringArray']):
-                        my_sku = sk2.OEMStringArray[1][2:7]
-                return my_sku
-            else:
-                w = WMI(namespace='WMI')
-                for sku in w.MS_SystemInformation(["SystemSKU"]):
-                    my_sku = sku.SystemSKU
-                return my_sku
+            w = WMI(namespace='WMI')
+            for sku in w.MS_SystemInformation(["SystemSKU"]):
+                my_sku = sku.SystemSKU
+            if my_sku == None:
+                w = WMI()
+                for sk2 in w.Win32_ComputerSystem(['OEMStringArray']):
+                    my_sku = sk2.OEMStringArray[1][2:7]
+            return my_sku
         except Exception as e:
             print(e)
             return None
