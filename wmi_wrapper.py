@@ -241,10 +241,9 @@ class WmiHandler():
                 pythoncom.CoUninitialize()
 
     @staticmethod
-    def get_system_sku(manufacturer):
+    def get_system_sku():
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
-
         try:
             my_sku=None
             w = WMI(namespace='WMI')
