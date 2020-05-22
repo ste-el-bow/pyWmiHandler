@@ -1,11 +1,13 @@
 from wmi import WMI, x_wmi_timed_out
 import pythoncom
 import threading
+
 try:
     from .helpers import convert_to_human_readable
 except ModuleNotFoundError:
     from helpers import convert_to_human_readable
-
+except ImportError:
+    from helpers import convert_to_human_readable
 class WmiHandler():
 
 
@@ -106,7 +108,7 @@ class WmiHandler():
         w = WMI()
         try:
             for bat in w.Win32_Battery(["BatteryStatus"]):
-                return bat.BatteryStatus in ['2', '3', '6', '7', '8', '9', '11']
+                return bat.BatteryStatus in [2, 3, 6, 7, 8, 9, 11]
         except Exception as e:
             print(e)
             return None
@@ -134,19 +136,21 @@ class WmiHandler():
 
     @staticmethod
     def get_estimated_battery_level():
+        batteries=[]
         """Thread Safe WMI Query for remaining battery level"""
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
         w = WMI()
         try:
             for bat in w.Win32_Battery(["EstimatedChargeRemaining"]):
-                return bat.EstimatedChargeRemaining
+                batteries.append(bat.EstimatedChargeRemaining)
         except Exception as e:
             print(e)
-            return -1
+            batteries.append(-1)
         finally:
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
+            return batteries
 
 
     @staticmethod
@@ -385,6 +389,7 @@ class VolumeRemovalWatcher:
 
 if __name__=="__main__":
     print(WmiHandler.get_IP())
+    print(WmiHandler.get_disks_drives())
     #print(WmiHandler.get_disks_drives())
 
 
