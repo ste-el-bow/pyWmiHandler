@@ -1,6 +1,7 @@
 from wmi import WMI, x_wmi_timed_out
 import pythoncom
 import threading
+from win32api import GetFileVersionInfo, LOWORD, HIWORD
 
 try:
     from .helpers import convert_to_human_readable
@@ -8,8 +9,16 @@ except ModuleNotFoundError:
     from helpers import convert_to_human_readable
 except ImportError:
     from helpers import convert_to_human_readable
-class WmiHandler():
 
+
+def get_version_number(filename):
+    info = GetFileVersionInfo(filename, "\\")
+    ms = info['FileVersionMS']
+    ls = info['FileVersionLS']
+    return HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls)
+
+
+class WmiHandler():
 
     @staticmethod
     def get_serial_number():
@@ -81,14 +90,13 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
-
     @staticmethod
     def get_processors():
         """Thread Safe WMI Query for Processors info in Win32_Processor Class"""
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
         w = WMI()
-        processors=[]
+        processors = []
         try:
             for p in w.Win32_Processor(["Name"]):
                 processors.append(p.Name)
@@ -123,7 +131,8 @@ class WmiHandler():
             pythoncom.CoInitialize()
         w = WMI()
         try:
-            for win in w.SoftwareLicensingProduct(["LicenseStatus"], ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f'):
+            for win in w.SoftwareLicensingProduct(["LicenseStatus"],
+                                                  ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f'):
                 if win.LicenseStatus == 1:
                     return True
             return False
@@ -136,7 +145,7 @@ class WmiHandler():
 
     @staticmethod
     def get_estimated_battery_level():
-        batteries=[]
+        batteries = []
         """Thread Safe WMI Query for remaining battery level"""
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
@@ -151,7 +160,6 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
             return batteries
-
 
     @staticmethod
     def set_display_brightness(brightness):
@@ -190,7 +198,6 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
-
     @staticmethod
     def get_pnp_devices():
         """Thread Safe WMI Query for list of system devices"""
@@ -202,12 +209,41 @@ class WmiHandler():
             for dev in w.Win32_PnPEntity():
                 try:
                     devices.append({'caption': dev.Caption,
-                     'hw_id': dev.HardwareID[0],
-                     'name': dev.Name,
-                     'status': dev.Status
-                     })
+                                    'hw_id': dev.HardwareID[0],
+                                    'name': dev.Name,
+                                    'status': dev.Status
+                                    })
                 except Exception as ex:
                     pass
+            return devices
+        except Exception as e:
+            print(e)
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
+    @staticmethod
+    def get_pnp_devices_with_drivers():
+        """Thread Safe WMI Query for list of system devices and installed drivers"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        w = WMI()
+        try:
+            devices = []
+            for dev in w.Win32_PnPEntity():
+                for driver in dev.associators(wmi_result_class='Win32_SystemDriver'):
+                    try:
+                        devices.append({'caption': dev.Caption,
+                                        'hw_id': dev.HardwareID[0],
+                                        'name': dev.Name,
+                                        'status': dev.Status,
+                                        'driverName': driver.Caption,
+                                        'driverFile': driver.PathName,
+                                        'version': '.'.join([str(x) for x in get_version_number(driver.PathName)])
+                                        })
+                    except Exception as ex:
+                        print(ex)
+                        pass
             return devices
         except Exception as e:
             print(e)
@@ -220,16 +256,16 @@ class WmiHandler():
         """Thread Safe WMI Query for Disk drives in Win32_DiskDrive Class
         Returns: array of Dictionary: {index, model, serial_number, capacity, human_capacity
         """
-        disks=[]
+        disks = []
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
         w = WMI()
         wql = 'SELECT * FROM Win32_DiskDrive'
         if internal_only:
-            wql+=' WHERE InterfaceType <> "USB"'
+            wql += ' WHERE InterfaceType <> "USB"'
         try:
             for dd in w.query(wql):
-                d ={}
+                d = {}
                 d['index'] = dd.Index
                 d['model'] = dd.Caption
                 d['serial_number'] = dd.SerialNumber
@@ -249,7 +285,7 @@ class WmiHandler():
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
         try:
-            my_sku=None
+            my_sku = None
             w = WMI(namespace='WMI')
             for sku in w.MS_SystemInformation(["SystemSKU"]):
                 my_sku = sku.SystemSKU
@@ -282,7 +318,6 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
-
     @staticmethod
     def is_ssd_drive(disk_id):
         """Thread Safe WMI Query for checking if disk drive is SSD  in MSFT_PhysicalDisk class"""
@@ -291,8 +326,8 @@ class WmiHandler():
 
         try:
             w = WMI(namespace='Microsoft\Windows\Storage')
-            for m in w.MSFT_PhysicalDisk(["MediaType"], DeviceId=disk_id ):
-                return int(m.MediaType)==4
+            for m in w.MSFT_PhysicalDisk(["MediaType"], DeviceId=disk_id):
+                return int(m.MediaType) == 4
         except Exception as e:
             print(e)
             return None
@@ -300,11 +335,14 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
+
 class UsbInsertWatcher:
     def __init__(self):
-        self.stop_wanted=False
+        self.stop_wanted = False
+
     def stop(self):
         self.stop_wanted = True
+
     def watch_for_events(self):
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
@@ -327,12 +365,15 @@ class UsbInsertWatcher:
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
+
 class VolumeCreationWatcher:
     def __init__(self, callback=None):
-        self.stop_wanted=False
-        self.callback=callback
+        self.stop_wanted = False
+        self.callback = callback
+
     def stop(self):
         self.stop_wanted = True
+
     def watch_for_events(self):
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
@@ -360,10 +401,12 @@ class VolumeCreationWatcher:
 
 class VolumeRemovalWatcher:
     def __init__(self, callback=None):
-        self.stop_wanted=False
-        self.callback=callback
+        self.stop_wanted = False
+        self.callback = callback
+
     def stop(self):
         self.stop_wanted = True
+
     def watch_for_events(self):
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
@@ -377,7 +420,7 @@ class VolumeRemovalWatcher:
                 except x_wmi_timed_out:
                     pass
                 else:
-                    print(event.DriveName)
+                    #print(event.DriveName)
                     if self.callback is not None:
                         self.callback(event.DriveName)
         except Exception as e:
@@ -387,15 +430,10 @@ class VolumeRemovalWatcher:
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
-if __name__=="__main__":
-    print(WmiHandler.get_IP())
-    print(WmiHandler.get_disks_drives())
-    #print(WmiHandler.get_disks_drives())
 
+if __name__ == "__main__":
+    print(WmiHandler.get_pnp_devices_with_drivers())
+    # print(WmiHandler.get_disks_drives())
 
     # t =threading.Thread(target=lambda: print(WmiHandler.is_computer_on_AC_power()))
     # t.start()
-
-
-
-
