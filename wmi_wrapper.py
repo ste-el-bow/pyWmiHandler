@@ -12,10 +12,18 @@ except ImportError:
 
 
 def get_version_number(filename):
-    info = GetFileVersionInfo(filename, "\\")
-    ms = info['FileVersionMS']
-    ls = info['FileVersionLS']
-    return HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls)
+    if not threading.current_thread() is threading.main_thread():
+        pythoncom.CoInitialize()
+    try:
+        info = GetFileVersionInfo(filename, "\\")
+        ms = info['FileVersionMS']
+        ls = info['FileVersionLS']
+        return HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls)
+    except Exception as e:
+        print(e)
+    finally:
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoUninitialize()
 
 
 class WmiHandler():
@@ -281,7 +289,7 @@ class WmiHandler():
                 pythoncom.CoUninitialize()
 
     @staticmethod
-    def get_system_sku():
+    def get_system_sku(manufacturer=None):
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
         try:
@@ -289,10 +297,12 @@ class WmiHandler():
             w = WMI(namespace='WMI')
             for sku in w.MS_SystemInformation(["SystemSKU"]):
                 my_sku = sku.SystemSKU
-            if my_sku == None:
+            if my_sku == None or my_sku == '':
                 w = WMI()
                 for sk2 in w.Win32_ComputerSystem(['OEMStringArray']):
-                    my_sku = sk2.OEMStringArray[1][2:7]
+                    my_sku = sk2.OEMStringArray[1][2:6]
+            if manufacturer and ("dell" in manufacturer.lower() or 'alienware' in manufacturer.lower()) and str(my_sku).strip() == 'None' or len(str(my_sku).strip()) != 4:
+                print('Possibly wrong SKU on dell unit!')
             return my_sku
         except Exception as e:
             print(e)
@@ -420,7 +430,7 @@ class VolumeRemovalWatcher:
                 except x_wmi_timed_out:
                     pass
                 else:
-                    #print(event.DriveName)
+                    # print(event.DriveName)
                     if self.callback is not None:
                         self.callback(event.DriveName)
         except Exception as e:
@@ -432,8 +442,6 @@ class VolumeRemovalWatcher:
 
 
 if __name__ == "__main__":
-    print(WmiHandler.get_pnp_devices_with_drivers())
-    # print(WmiHandler.get_disks_drives())
-
-    # t =threading.Thread(target=lambda: print(WmiHandler.is_computer_on_AC_power()))
-    # t.start()
+    for member in dir(WmiHandler):
+        if not member.startswith('_'):
+            print(member)
