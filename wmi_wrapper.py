@@ -345,6 +345,72 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
+    @staticmethod
+    def get_batteries_info():
+        batteries=[]
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        try:
+            w = WMI(namespace='WMI')
+            for battery in w.BatteryStaticData(["Active","DeviceName", "DesignedCapacity", "ManufactureName", "SerialNumber", "InstanceName"]):
+                batt = {"DeviceName": battery.DeviceName,
+                        "ManufactureName": battery.ManufactureName,
+                        "SerialNumber": battery.SerialNumber,
+                        "DesignedCapacity": battery.DesignedCapacity,
+                        "InstanceName": battery.InstanceName}
+                for details in w.BatteryStatus():
+                    if batt['InstanceName'] == details.InstanceName:
+                        batt['Status'] = {
+                            'Active': details.Active,
+                            'ChargeRate': details.ChargeRate,
+                            'Charging': details.Charging,
+                            'Discharging': details.Discharging,
+                            'DischargeRate': details.DischargeRate,
+                            'PowerOnline': details.PowerOnline,
+                            'Voltage': details.Voltage,
+                            'RemainingCapacity': details.RemainingCapacity
+
+                        }
+                batteries.append(batt)
+            return batteries
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
+
+    @staticmethod
+    def get_current_batteries_info(batteries: list):
+        result = {}
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        try:
+            w = WMI(namespace='WMI')
+            for details in w.BatteryStatus():
+                for battery in batteries:
+                    result[battery]=None
+                    if battery == details.InstanceName:
+                        result[battery]={
+                            'Active': details.Active,
+                            'ChargeRate': details.ChargeRate,
+                            'Charging': details.Charging,
+                            'Discharging': details.Discharging,
+                            'DischargeRate': details.DischargeRate,
+                            'PowerOnline': details.PowerOnline,
+                            'Voltage': details.Voltage,
+                            'RemainingCapacity': details.RemainingCapacity
+
+                        }
+            return result
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
 
 class UsbInsertWatcher:
     def __init__(self):
@@ -442,6 +508,7 @@ class VolumeRemovalWatcher:
 
 
 if __name__ == "__main__":
-    for member in dir(WmiHandler):
-        if not member.startswith('_'):
-            print(member)
+    batteries = WmiHandler.get_batteries_info()
+    print(batteries)
+    instances = [x['InstanceName'] for x in batteries]
+    print(WmiHandler.get_current_batteries_info(instances))
