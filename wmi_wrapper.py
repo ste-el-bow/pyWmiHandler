@@ -20,7 +20,7 @@ def get_version_number(filename):
         ls = info['FileVersionLS']
         return HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls)
     except Exception as e:
-        print(e)
+        return 0, 0, 0, 0
     finally:
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoUninitialize()
@@ -301,7 +301,8 @@ class WmiHandler():
                 w = WMI()
                 for sk2 in w.Win32_ComputerSystem(['OEMStringArray']):
                     my_sku = sk2.OEMStringArray[1][2:6]
-            if manufacturer and ("dell" in manufacturer.lower() or 'alienware' in manufacturer.lower()) and str(my_sku).strip() == 'None' or len(str(my_sku).strip()) != 4:
+            if manufacturer and ("dell" in manufacturer.lower() or 'alienware' in manufacturer.lower()) and str(
+                    my_sku).strip() == 'None' or len(str(my_sku).strip()) != 4:
                 print('Possibly wrong SKU on dell unit!')
             return my_sku
         except Exception as e:
@@ -347,17 +348,24 @@ class WmiHandler():
 
     @staticmethod
     def get_batteries_info():
-        batteries=[]
+        batteries = []
         if not threading.current_thread() is threading.main_thread():
             pythoncom.CoInitialize()
         try:
             w = WMI(namespace='WMI')
-            for battery in w.BatteryStaticData(["Active","DeviceName", "DesignedCapacity", "ManufactureName", "SerialNumber", "InstanceName"]):
+            for battery in w.BatteryStaticData(
+                    ["Active", "DeviceName", "DesignedCapacity", "ManufactureName", "SerialNumber", "InstanceName"]):
                 batt = {"DeviceName": battery.DeviceName,
                         "ManufactureName": battery.ManufactureName,
                         "SerialNumber": battery.SerialNumber,
                         "DesignedCapacity": battery.DesignedCapacity,
                         "InstanceName": battery.InstanceName}
+                for capacity in w.BatteryFullChargedCapacity():
+                    if batt['InstanceName'] == capacity.InstanceName:
+                        batt['FullChargedCapacity'] = capacity.FullChargedCapacity
+                for cycle_count in w.BatteryCycleCount():
+                    if batt['InstanceName'] == cycle_count.InstanceName:
+                        batt['CycleCount'] = cycle_count.CycleCount
                 for details in w.BatteryStatus():
                     if batt['InstanceName'] == details.InstanceName:
                         batt['Status'] = {
@@ -380,7 +388,6 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
-
     @staticmethod
     def get_current_batteries_info(batteries: list):
         result = {}
@@ -390,9 +397,9 @@ class WmiHandler():
             w = WMI(namespace='WMI')
             for details in w.BatteryStatus():
                 for battery in batteries:
-                    result[battery]=None
+                    result[battery] = None
                     if battery == details.InstanceName:
-                        result[battery]={
+                        result[battery] = {
                             'Active': details.Active,
                             'ChargeRate': details.ChargeRate,
                             'Charging': details.Charging,
