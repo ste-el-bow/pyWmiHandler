@@ -1,6 +1,7 @@
 from wmi import WMI, x_wmi_timed_out
 import pythoncom
 import threading
+import time
 from win32api import GetFileVersionInfo, LOWORD, HIWORD
 
 try:
@@ -347,6 +348,31 @@ class WmiHandler():
                 pythoncom.CoUninitialize()
 
     @staticmethod
+    def kill_process_by_name(name):
+        """Thread Safe WMI Methods Execution for killing process by name using Win32_Process class"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        try:
+            w = WMI()
+            wql = 'SELECT * FROM Win32_Process WHERE Name LIKE "%{}%"'.format(name)
+            success = True
+            for process in w.query(wql):
+                try:
+                    process.Terminate()
+                except Exception as e:
+                    pass
+            time.sleep(1)
+            for p in w.query(wql):
+                success=False
+            return success
+        except Exception as e:
+            print(e)
+            return False
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
+    @staticmethod
     def get_batteries_info():
         batteries = []
         if not threading.current_thread() is threading.main_thread():
@@ -515,7 +541,4 @@ class VolumeRemovalWatcher:
 
 
 if __name__ == "__main__":
-    batteries = WmiHandler.get_batteries_info()
-    print(batteries)
-    instances = [x['InstanceName'] for x in batteries]
-    print(WmiHandler.get_current_batteries_info(instances))
+    print(WmiHandler.kill_process_by_name('doom3'))
