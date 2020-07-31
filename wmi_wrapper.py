@@ -45,6 +45,26 @@ class WmiHandler():
             if not threading.current_thread() is threading.main_thread():
                 pythoncom.CoUninitialize()
 
+
+    @staticmethod
+    def get_video_cards():
+        """Thread Safe WMI Query for Video Cards in Win32_VideoController Class"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        w = WMI()
+        video_cards = []
+        try:
+            for v in w.VideoController(["Caption", "Status"]):
+                video_cards.append({'Caption': v.Caption, 'Status': v.Status})
+            return video_cards
+        except Exception as e:
+            print(e)
+            return []
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
+
     @staticmethod
     def get_operating_system_info():
         """Thread Safe WMI Query for Caption, build, arch, systemDrive in Win32_OperatingSystem Class"""
