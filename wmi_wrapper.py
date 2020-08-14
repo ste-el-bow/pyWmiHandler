@@ -54,7 +54,7 @@ class WmiHandler():
         w = WMI()
         video_cards = []
         try:
-            for v in w.VideoController(["Caption", "Status"]):
+            for v in w.Win32_VideoController(["Caption", "Status"]):
                 video_cards.append({'Caption': v.Caption, 'Status': v.Status})
             return video_cards
         except Exception as e:
@@ -561,4 +561,5 @@ class VolumeRemovalWatcher:
 
 
 if __name__ == "__main__":
-    print(WmiHandler.kill_process_by_name('doom3'))
+    #print(WmiHandler.kill_process_by_name('doom3'))
+    print(WmiHandler.get_video_cards())
