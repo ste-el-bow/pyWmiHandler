@@ -7,9 +7,9 @@ from win32api import GetFileVersionInfo, LOWORD, HIWORD
 try:
     from .helpers import convert_to_human_readable
 except ModuleNotFoundError:
-    from helpers import convert_to_human_readable
+    from pyWmiHandler.helpers import convert_to_human_readable
 except ImportError:
-    from helpers import convert_to_human_readable
+    from pyWmiHandler.helpers import convert_to_human_readable
 
 
 def get_version_number(filename):

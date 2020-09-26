@@ -1,0 +1,12 @@
+language: python
+
+python:
+    - "3.7"
+
+os: windows
+
+install:
+  - pip install -r pyWmiHandler/requirements.txt
+
+script:
+  - python setup.py test
