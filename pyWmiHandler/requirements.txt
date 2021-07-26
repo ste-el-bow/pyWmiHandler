@@ -8,3 +8,4 @@ pypiwin32
 pywin32
 pywin32-ctypes
 WMI
+nose

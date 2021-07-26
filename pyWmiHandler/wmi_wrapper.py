@@ -7,9 +7,9 @@ from win32api import GetFileVersionInfo, LOWORD, HIWORD
 try:
     from .helpers import convert_to_human_readable
 except ModuleNotFoundError:
-    from helpers import convert_to_human_readable
+    from pyWmiHandler.helpers import convert_to_human_readable
 except ImportError:
-    from helpers import convert_to_human_readable
+    from pyWmiHandler.helpers import convert_to_human_readable
 
 
 def get_version_number(filename):
@@ -590,6 +590,44 @@ class VolumeRemovalWatcher:
                 pythoncom.CoUninitialize()
 
 
+class PowerEventsWatcher:
+    """
+    Class that watches for power supply state change (ex. computer is on Ac, switch to battery etc. )
+    And calls calback funtion with event paramters if passed.
+    Event: EventType, TIME_CREATED
+    """
+    def __init__(self, callback=None):
+        self.stop_wanted = False
+        self.callback = callback
+
+    def stop(self):
+        self.stop_wanted = True
+
+    def watch_for_events(self):
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+
+        try:
+            w = WMI()
+            watcher = w.Win32_PowerManagementEvent.watch_for(EventType=10)
+            while not self.stop_wanted:
+                try:
+                    event = watcher(timeout_ms=1000)
+                except x_wmi_timed_out:
+                    pass
+                else:
+                    if self.callback is not None:
+                        self.callback(event)
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+
 if __name__ == "__main__":
     #print(WmiHandler.kill_process_by_name('doom3'))
-    print(WmiHandler.get_video_cards())
+    p = PowerEventsWatcher()
+    p.watch_for_events()
+    input('end?')
+    #print(WmiHandler.get_video_cards())
