@@ -190,6 +190,36 @@ class WmiHandler():
                 pythoncom.CoUninitialize()
             return batteries
 
+
+    @staticmethod
+    def get_legacy_batteries_info():
+        batteries = []
+        """Thread Safe WMI Query for remaining battery level"""
+        if not threading.current_thread() is threading.main_thread():
+            pythoncom.CoInitialize()
+        w = WMI()
+        try:
+            for bat in w.Win32_Battery():
+                b = {
+                 "DeviceID":bat.DeviceID,
+                 "Availability": bat.Availability,
+                 "BatteryStatus":bat.BatteryStatus,
+                 "Caption": bat.Caption,
+                 "Chemistry": bat.Chemistry,
+                 "Description": bat.Description,
+                 "DesignVoltage": bat.DesignVoltage,
+                 "EstimatedChargeRemaining": bat.EstimatedChargeRemaining,
+                 "Status": bat.Status
+                }
+                batteries.append(b)
+        except Exception as e:
+            print(e)
+            batteries.append(-1)
+        finally:
+            if not threading.current_thread() is threading.main_thread():
+                pythoncom.CoUninitialize()
+            return batteries
+
     @staticmethod
     def set_display_brightness(brightness):
         """Thread Safe WMI Query for setting display brightness"""
